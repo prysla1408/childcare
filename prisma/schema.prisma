@@ -1,0 +1,173 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
+// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+// generator erd {
+//   provider = "prisma-erd-generator"
+// }
+
+datasource db {
+  // provider = "mysql"
+  // url      = env("DATABASE_URL")
+
+  provider  = "postgresql"
+  url       = env("POSTGRES_PRISMA_URL") // uses connection pooling
+  directUrl = env("POSTGRES_URL_NON_POOLING") // uses a direct connection
+}
+
+model nursery {
+  id           String         @id @default(uuid())
+  name         String         @db.VarChar(255)
+  address      String         @db.Text
+  phone        String         @db.VarChar(15)
+  email        String         @db.VarChar(355)
+  createdAt    DateTime       @default(now())
+  updatedAt    DateTime       @updatedAt
+  staff        staff[]
+  activityType activityType[]
+  child        child[]
+}
+
+model staff {
+  id        String   @id @default(uuid())
+  nurseryId String?
+  reference String   @db.VarChar(50)
+  firstName String   @db.VarChar(255)
+  lastName  String   @db.VarChar(255)
+  position  String   @db.VarChar(255)
+  gender    String   @db.VarChar(1)
+  address   String   @db.Text
+  phone     String   @db.VarChar(15)
+  email     String   @db.VarChar(355)
+  password  String   @db.VarChar(255)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  nursery nursery? @relation(fields: [nurseryId], references: [id], onDelete: SetNull, onUpdate: Cascade)
+
+  @@unique([reference])
+}
+
+model child {
+  id        String   @id @default(uuid())
+  nurseryId String?
+  reference String   @db.VarChar(50)
+  firstName String   @db.VarChar(255)
+  lastName  String   @db.VarChar(255)
+  gender    String   @db.VarChar(1)
+  birthDate DateTime @db.Date
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  medicalRecord medicalRecord[]
+  payment       payment[]
+  attendance    attendance[]
+  parentChild   parentChild[]
+  activity      activity[]
+
+  nursery nursery? @relation(fields: [nurseryId], references: [id], onDelete: SetNull, onUpdate: Cascade)
+
+  @@unique([reference])
+}
+
+model parent {
+  id        String   @id @default(uuid())
+  reference String   @db.VarChar(50)
+  firstName String   @db.VarChar(255)
+  lastName  String   @db.VarChar(255)
+  gender    String   @db.VarChar(1)
+  address   String   @db.Text
+  phone     String   @db.VarChar(15)
+  email     String   @db.VarChar(355)
+  password  String   @db.VarChar(255)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  parentChild parentChild[]
+
+  @@unique([reference])
+}
+
+model parentChild {
+  id       String  @id @default(uuid())
+  parentId String?
+  childId  String?
+  parent   parent? @relation(fields: [parentId], references: [id], onDelete: SetNull, onUpdate: Cascade)
+  child    child?  @relation(fields: [childId], references: [id], onDelete: SetNull, onUpdate: Cascade)
+
+  @@map("parent_child")
+  @@unique([parentId,childId])
+}
+
+model activity {
+  id             String        @id @default(uuid())
+  activityTypeId String?
+  childId        String?
+  period         String
+  note           String        @db.Text
+  status         Boolean       @default(true)
+  createdAt      DateTime      @default(now())
+  updatedAt      DateTime      @updatedAt
+  activityType   activityType? @relation(fields: [activityTypeId], references: [id], onDelete: SetNull, onUpdate: Cascade)
+  child          child?        @relation(fields: [childId], references: [id], onDelete: SetNull, onUpdate: Cascade)
+}
+
+model activityType {
+  id        String   @id @default(uuid())
+  nurseryId String?
+  name      String   @db.VarChar(50)
+  status    Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  activity activity[]
+  nursery  nursery?   @relation(fields: [nurseryId], references: [id], onDelete: SetNull, onUpdate: Cascade)
+
+  @@map("activity_type")
+}
+
+model medicalRecord {
+  id           String   @id @default(uuid())
+  childId      String?
+  allergies    String   @db.VarChar(50)
+  medication   String   @db.VarChar(50)
+  specialNeeds String   @db.VarChar(50)
+  status       Boolean  @default(true)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+  child        child?   @relation(fields: [childId], references: [id], onDelete: SetNull, onUpdate: Cascade)
+
+  @@map("medical_record")
+}
+
+model payment {
+  id        String   @id @default(uuid())
+  childId   String?
+  narrative String   @db.VarChar(255)
+  reference String   @db.VarChar(255)
+  method    String   @db.VarChar(100)
+  amount    Float    @db.DoublePrecision
+  // amount    Float    @db.Double
+  paidOn    DateTime
+  status    Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  child     child?   @relation(fields: [childId], references: [id], onDelete: SetNull, onUpdate: Cascade)
+}
+
+model attendance {
+  id        String    @id @default(uuid())
+  childId   String? 
+  checkIn   DateTime?
+  checkOut  DateTime?
+  status    Boolean   @default(true)
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  child     child?    @relation(fields: [childId], references: [id], onDelete: SetNull, onUpdate: Cascade)
+}
